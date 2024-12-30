@@ -1,12 +1,68 @@
 "use client";
+import { useState, useRef, useCallback, useEffect } from "react";
+import { MotionValue, useTransform, motion } from "framer-motion";
 import Image from "next/image";
 
 import { cn } from "@/lib/utils";
 
-const Books = () => {
+const Books = ({
+  targetRef,
+  scrollYProgress,
+}: {
+  targetRef: React.RefObject<HTMLDivElement | null>;
+  scrollYProgress: MotionValue<number>;
+}) => {
+  const contentRef = useRef<HTMLDivElement>(null);
+  const [position, setPosition] = useState({
+    targetX: 0,
+    targetY: 0,
+    targetWidth: 0,
+    initialWidth: 0,
+  });
+
+  const calculatePosition = useCallback(() => {
+    if (targetRef.current && contentRef.current) {
+      const targetRect = targetRef.current.getBoundingClientRect();
+      const contentRect = contentRef.current.getBoundingClientRect();
+
+      setPosition({
+        targetX: targetRect.left - contentRect.left,
+        targetY: targetRect.top - contentRect.top,
+        targetWidth: targetRect.width,
+        initialWidth: contentRect.width,
+      });
+    }
+  }, [targetRef]);
+
+  // Calculate the initial position of the lamp
+  useEffect(() => {
+    calculatePosition();
+
+    const handleResize = () => {
+      calculatePosition();
+    };
+
+    window.addEventListener("resize", handleResize);
+
+    return () => {
+      window.removeEventListener("resize", handleResize);
+    };
+  }, []);
+
+  // Map scroll progress to horizontal and vertical movement
+  const x = useTransform(scrollYProgress, [0, 0.8], [0, position.targetX]);
+  const y = useTransform(scrollYProgress, [0, 0.8], [0, position.targetY]);
+
+  const borderWidth = useTransform(scrollYProgress, [0, 0.8], [2, 0]);
+  const opacity = useTransform(scrollYProgress, [0, 0.8], [1, 0]);
+
   return (
-    <div className="flex flex-col absolute right-20 h-36 w-48 top-32 border-2 border-hero-editBorder z-10">
-      <div>
+    <motion.div
+      className="flex flex-col absolute right-20 h-36 w-48 top-40 border-2 border-hero-editBorder z-10"
+      style={{ x, y, borderWidth }}
+      ref={contentRef}
+    >
+      <motion.div style={{ opacity }}>
         {/* Corner Dots */}
         <CornerDot position="top-left" />
         <CornerDot position="top-right" />
@@ -18,12 +74,15 @@ const Books = () => {
         <CornerDot position="bottom" />
         <CornerDot position="left" />
         <CornerDot position="right" />
-      </div>
+      </motion.div>
 
       {/* Label */}
-      <span className="absolute left-1 -top-4 h-4 bg-hero-editBorder px-4 text-xs text-primary-foreground z-9">
+      <motion.span
+        className="absolute left-1 -top-4 h-4 bg-hero-editBorder px-4 text-xs text-primary-foreground z-9"
+        style={{ opacity }}
+      >
         Transparent video
-      </span>
+      </motion.span>
 
       {/* Image */}
       <Image
@@ -33,7 +92,7 @@ const Books = () => {
         objectFit="cover"
         className="p-3"
       />
-    </div>
+    </motion.div>
   );
 };
 
